@@ -1,4 +1,4 @@
-## Summary price table (USD):
+## Economy Summary price table (USD):
 ```
 Window | with_SHA    | without_SHA
 ----------------------------------
@@ -7,6 +7,15 @@ mid    | $2312       | $2410
 late   | $2592       | $2635 
 ```
 
+## Premium Economy Summary price table (USD):
+```
+Summary price table (USD):
+Window | with_SHA    | without_SHA
+----------------------------------
+early  | $4118       | $4738      
+mid    | $3618       | $4345      
+late   | $3019       | $4735  
+```
 
 ## Itineraries in summary table:
 ```
