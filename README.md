@@ -84,6 +84,27 @@ python3 /Users/travischan/Projects/Asia-Flights-Price-Optimizer/trip_calculator.
   --exclude-shanghai
 ```
 
+Summary matrix of cheapest prices by window (rows) and Shanghai inclusion (columns),
+followed by printing those itineraries:
+```bash
+python3 /Users/travischan/Projects/Asia-Flights-Price-Optimizer/trip_calculator.py \
+  --csv /Users/travischan/Projects/Asia-Flights-Price-Optimizer/flights.csv \
+  --summary-table
+```
+Example output (prices illustrative):
+```text
+Summary price table (USD):
+Window | with_SHA    | without_SHA
+----------------------------------
+early  | $2237       | $2168
+mid    | $2237       | $2168
+late   | -           | $2310
+
+Itineraries in summary table:
+[1] $2237 | window=mid | include_SHA=True
+...
+```
+
 ### Date flexibility and defaults
 When selecting a flight for a preferred date (forward-only), the tool:
 1) Searches on the preferred date, then up to +1 day (no earlier than the preferred date).

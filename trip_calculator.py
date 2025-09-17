@@ -577,6 +577,77 @@ def print_results(results: List[ItineraryResult]) -> None:
         print("")
 
 
+def build_summary_matrix(
+    store: FlightStore,
+    windows: Dict[str, Tuple[date, date]],
+    flex_days: int = 1,
+    min_total_days: int = 17,
+    max_total_days: int = 25,
+) -> Tuple[List[str], Dict[str, Dict[str, Optional[ItineraryResult]]]]:
+    """Compute the cheapest itinerary per (window x include_shanghai) cell.
+
+    Returns (row_order, matrix) where matrix[row][col] is an ItineraryResult or None.
+    Columns are the strings "with_SHA" and "without_SHA".
+    """
+
+    # Stable desired order
+    desired_order = ["early", "mid", "late"]
+    row_order = [w for w in desired_order if w in windows]
+
+    matrix: Dict[str, Dict[str, Optional[ItineraryResult]]] = {}
+    for w in row_order:
+        win_dict = {w: windows[w]}
+        best_with = build_itineraries(
+            store,
+            include_shanghai=True,
+            windows=win_dict,
+            top_k=1,
+            flex_days=flex_days,
+            min_total_days=min_total_days,
+            max_total_days=max_total_days,
+        )
+        best_without = build_itineraries(
+            store,
+            include_shanghai=False,
+            windows=win_dict,
+            top_k=1,
+            flex_days=flex_days,
+            min_total_days=min_total_days,
+            max_total_days=max_total_days,
+        )
+
+        matrix[w] = {
+            "with_SHA": best_with[0] if best_with else None,
+            "without_SHA": best_without[0] if best_without else None,
+        }
+
+    return row_order, matrix
+
+
+def print_summary_price_table(row_order: List[str], matrix: Dict[str, Dict[str, Optional[ItineraryResult]]]) -> None:
+    """Pretty-print the summary price table (rows: windows, columns: with/without SHA)."""
+
+    # Compute column widths
+    row_label = "Window"
+    col_labels = ["with_SHA", "without_SHA"]
+    row_w = max(len(row_label), *(len(r) for r in row_order)) if row_order else len(row_label)
+    col_w = 11  # enough for '$123456789'
+
+    # Header
+    header = f"{row_label:<{row_w}} | {col_labels[0]:<{col_w}} | {col_labels[1]:<{col_w}}"
+    print("Summary price table (USD):")
+    print(header)
+    print("-" * len(header))
+
+    # Rows
+    for r in row_order:
+        with_cell = matrix[r]["with_SHA"]
+        without_cell = matrix[r]["without_SHA"]
+        with_str = f"${with_cell.total_price:.0f}" if with_cell else "-"
+        without_str = f"${without_cell.total_price:.0f}" if without_cell else "-"
+        print(f"{r:<{row_w}} | {with_str:<{col_w}} | {without_str:<{col_w}}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description=(
@@ -602,6 +673,14 @@ def main() -> None:
         action="store_true",
         help="Only evaluate itineraries that exclude Shanghai",
     )
+    parser.add_argument(
+        "--summary-table",
+        action="store_true",
+        help=(
+            "Print a matrix of cheapest prices (rows: windows; columns: with/without SHA) "
+            "and then print the itineraries included in that matrix"
+        ),
+    )
     args = parser.parse_args()
 
     if args.template_path:
@@ -622,6 +701,37 @@ def main() -> None:
         if win in windows:
             windows = {win: windows[win]}
 
+    if args.summary_table:
+        # Build and print summary matrix
+        row_order, matrix = build_summary_matrix(
+            store,
+            windows=windows,
+            flex_days=1,
+            min_total_days=17,
+            max_total_days=25,
+        )
+        print_summary_price_table(row_order, matrix)
+
+        # Gather the itineraries present in the table (ordered by rows, with then without)
+        selected: List[ItineraryResult] = []
+        for r in row_order:
+            cell_with = matrix[r]["with_SHA"]
+            cell_without = matrix[r]["without_SHA"]
+            if cell_with is not None:
+                selected.append(cell_with)
+            if cell_without is not None:
+                selected.append(cell_without)
+
+        print("")
+        if selected:
+            print("Itineraries in summary table:")
+            print("")
+            print_results(selected)
+        else:
+            print("No valid itineraries found for the requested windows.")
+        return
+
+    # Default behavior: compute global top N across both include/exclude Shanghai sets
     results: List[ItineraryResult] = []
     if not args.exclude_shanghai:
         results += build_itineraries(
