@@ -382,8 +382,8 @@ def departure_windows_dec_2025() -> Dict[str, Tuple[date, date]]:
 def default_nights(include_shanghai: bool) -> Dict[str, int]:
     base = {
         TOKYO: 5,
-        HONG_KONG: 5,  # must cover 12/28–1/1 inclusive
-        TAIWAN: 5,
+        HONG_KONG: 4,  # must cover 12/28–1/1 inclusive
+        TAIWAN: 4,
     }
     if include_shanghai:
         base[SHANGHAI] = 3
@@ -707,7 +707,7 @@ def main() -> None:
             store,
             windows=windows,
             flex_days=1,
-            min_total_days=17,
+            min_total_days=16,
             max_total_days=25,
         )
         print_summary_price_table(row_order, matrix)
